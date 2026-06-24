@@ -1,6 +1,7 @@
 import { prisma } from "@/app/lib/prisma";
 import { CreateDrawForm } from "./create-draw-form";
 import { ExecuteDrawButton } from "./execute-draw-button";
+import { PublishDrawButton } from "./publish-draw-button";
 
 export default async function AdminDrawsPage() {
   const draws = await prisma.draw.findMany({
@@ -35,7 +36,9 @@ export default async function AdminDrawsPage() {
                     className={`ml-3 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
                       d.status === "completed"
                         ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
+                        : d.status === "simulated"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-yellow-100 text-yellow-700"
                     }`}
                   >
                     {d.status}
@@ -55,6 +58,7 @@ export default async function AdminDrawsPage() {
                     Pool: ₹{Number(d.prizePool5) + Number(d.prizePool4) + Number(d.prizePool3)}
                   </span>
                   {d.status === "pending" && <ExecuteDrawButton drawId={d.id} />}
+                  {d.status === "simulated" && <PublishDrawButton drawId={d.id} />}
                 </div>
               </div>
             ))}

@@ -11,6 +11,11 @@ export async function addScore(prevState: ScoreFormState, formData: FormData): P
   const user = await getUser()
   if (!user) return { error: 'Not authenticated' }
 
+  const sub = await prisma.subscription.findFirst({
+    where: { userId: user.id, status: 'active' },
+  })
+  if (!sub) return { error: 'Active subscription required to enter scores' }
+
   const parsed = ScoreFormSchema.safeParse({
     score: formData.get('score'),
     date: formData.get('date'),

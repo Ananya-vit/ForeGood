@@ -18,13 +18,13 @@ export default async function DashboardPage() {
   })
 
   const recentDraw = await prisma.drawResult.findFirst({
-    where: { userId },
+    where: { userId, draw: { status: "completed" } },
     orderBy: { createdAt: "desc" },
     include: { draw: { select: { month: true, year: true } } },
   })
 
   const winnings = await prisma.winner.findMany({
-    where: { userId },
+    where: { userId, drawResult: { draw: { status: "completed" } } },
     include: { drawResult: { include: { draw: { select: { month: true, year: true } } } } },
   })
 

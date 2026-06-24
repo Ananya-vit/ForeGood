@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/app/lib/prisma'
 import { getUser } from '@/app/lib/dal'
-import { runDraw } from '@/app/lib/draw-engine'
+import { runDraw, publishDraw } from '@/app/lib/draw-engine'
 
 export type DrawActionState = { error?: string; success?: boolean }
 
@@ -35,10 +35,23 @@ export async function executeDraw(drawId: string) {
   if (user?.role !== 'admin') return { error: 'Unauthorized' }
 
   try {
-    const result = await runDraw(drawId)
+    await runDraw(drawId)
     revalidatePath('/admin/draws')
-    return { success: true, ...result }
+    return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Draw failed' }
+  }
+}
+
+export async function publishDrawAction(drawId: string) {
+  const user = await getUser()
+  if (user?.role !== 'admin') return { error: 'Unauthorized' }
+
+  try {
+    await publishDraw(drawId)
+    revalidatePath('/admin/draws')
+    return { success: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Publish failed' }
   }
 }

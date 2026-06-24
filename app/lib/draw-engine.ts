@@ -124,10 +124,22 @@ export async function runDraw(drawId: string) {
 
   await prisma.draw.update({
     where: { id: drawId },
-    data: { winningNumbers, status: 'completed' },
+    data: { winningNumbers, status: 'simulated' },
   })
 
   await calculatePrizePools(drawId)
+
+  return { winningNumbers, drawResults }
+}
+
+export async function publishDraw(drawId: string) {
+  const draw = await prisma.draw.findUnique({ where: { id: drawId } })
+  if (!draw || draw.status !== 'simulated') throw new Error('Draw must be simulated first')
+
+  await prisma.draw.update({
+    where: { id: drawId },
+    data: { status: 'completed' },
+  })
 
   const labeled = `${draw.month}/${draw.year}`
   const resultsWithPrizes = await prisma.drawResult.findMany({
@@ -136,6 +148,4 @@ export async function runDraw(drawId: string) {
   for (const r of resultsWithPrizes) {
     notifyDrawWinner(r.userId, labeled, r.matchType, Number(r.prizeAmount))
   }
-
-  return { winningNumbers, drawResults }
 }
