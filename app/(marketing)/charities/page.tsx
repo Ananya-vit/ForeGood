@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/app/lib/prisma";
+import type { Charity } from "@prisma/client";
 
 export default async function CharityDirectoryPage() {
-  const charities = await prisma.charity.findMany({ orderBy: { name: "asc" } });
+  const charities: Charity[] = await prisma.charity.findMany({ orderBy: { name: "asc" } });
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
