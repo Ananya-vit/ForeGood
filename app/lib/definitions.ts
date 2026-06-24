@@ -20,8 +20,13 @@ export type FormState =
   | { errors?: { name?: string[]; email?: string[]; password?: string[] }; message?: string }
   | undefined
 
+export const ScoreFormSchema = z.object({
+  score: z.coerce.number().int().min(1, 'Score must be at least 1').max(999, 'Score must be 999 or less'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
+})
+
 export type SessionPayload = {
-  userId: number
+  userId: string
   role: 'user' | 'admin'
   expiresAt: Date
 }

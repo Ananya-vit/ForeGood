@@ -7,7 +7,7 @@ datasource db {
 }
 
 model User {
-  id           BigInt         @id @default(autoincrement())
+  id           String         @id @default(uuid())
   email        String         @unique
   name         String
   passwordHash String         @map("password_hash")
@@ -22,14 +22,14 @@ model User {
 }
 
 model Subscription {
-  id                   BigInt    @id @default(autoincrement())
-  userId               BigInt    @map("user_id")
+  id                   String    @id @default(uuid())
+  userId               String    @map("user_id")
   plan                 String
   status               String    @default("active")
   stripeSubscriptionId String?   @map("stripe_subscription_id")
   currentPeriodEnd     DateTime? @map("current_period_end")
-  charityId            BigInt?   @map("charity_id")
-  charityPct           Int       @default(10)
+  charityId            String?   @map("charity_id")
+  charityPct           Int       @default(10) @map("charity_pct")
   createdAt            DateTime  @default(now()) @map("created_at")
   user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   charity              Charity?  @relation(fields: [charityId], references: [id], onDelete: SetNull)
@@ -38,8 +38,8 @@ model Subscription {
 }
 
 model Score {
-  id        BigInt   @id @default(autoincrement())
-  userId    BigInt   @map("user_id")
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
   score     Int
   date      DateTime @db.Date
   createdAt DateTime @default(now()) @map("created_at")
@@ -51,7 +51,7 @@ model Score {
 }
 
 model Draw {
-  id              BigInt      @id @default(autoincrement())
+  id              String      @id @default(uuid())
   month           Int
   year            Int
   status          String      @default("pending")
@@ -69,9 +69,9 @@ model Draw {
 }
 
 model DrawResult {
-  id          BigInt   @id @default(autoincrement())
-  drawId      BigInt   @map("draw_id")
-  userId      BigInt   @map("user_id")
+  id          String   @id @default(uuid())
+  drawId      String   @map("draw_id")
+  userId      String   @map("user_id")
   matchType   Int      @map("match_type")
   prizeAmount Decimal  @default(0) @db.Decimal(12, 2) @map("prize_amount")
   status      String   @default("pending")
@@ -84,7 +84,7 @@ model DrawResult {
 }
 
 model Charity {
-  id            BigInt         @id @default(autoincrement())
+  id            String         @id @default(uuid())
   name          String
   description   String?
   imageUrl      String?        @map("image_url")
@@ -97,9 +97,9 @@ model Charity {
 }
 
 model Winner {
-  id            BigInt     @id @default(autoincrement())
-  drawResultId  BigInt     @unique @map("draw_result_id")
-  userId        BigInt     @map("user_id")
+  id            String     @id @default(uuid())
+  drawResultId  String     @unique @map("draw_result_id")
+  userId        String     @map("user_id")
   proofUrl      String?    @map("proof_url")
   adminStatus   String     @default("pending") @map("admin_status")
   paymentStatus String     @default("pending") @map("payment_status")

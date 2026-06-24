@@ -1,8 +1,66 @@
-export default function AdminDrawsPage() {
+import { prisma } from "@/app/lib/prisma";
+import { CreateDrawForm } from "./create-draw-form";
+import { ExecuteDrawButton } from "./execute-draw-button";
+
+export default async function AdminDrawsPage() {
+  const draws = await prisma.draw.findMany({
+    orderBy: [{ year: "desc" }, { month: "desc" }],
+    include: { _count: { select: { drawResults: true } } },
+  });
+
   return (
     <div>
       <h1 className="text-2xl font-bold">Draw Management</h1>
-      <p className="mt-1 text-gray-500">Configure, simulate, and publish draws (coming in Phase 4)</p>
+      <p className="mt-1 text-gray-500">Create, simulate, and publish monthly draws</p>
+
+      <div className="mt-8 max-w-sm">
+        <h2 className="text-lg font-semibold">New draw</h2>
+        <CreateDrawForm />
+      </div>
+
+      <div className="mt-10">
+        <h2 className="text-lg font-semibold">Draws</h2>
+
+        {draws.length === 0 ? (
+          <p className="mt-2 text-sm text-gray-400">No draws yet.</p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {draws.map((d) => (
+              <div key={d.id} className="flex items-center justify-between rounded-lg border px-4 py-3">
+                <div>
+                  <span className="font-medium">
+                    {d.month}/{d.year}
+                  </span>
+                  <span
+                    className={`ml-3 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                      d.status === "completed"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
+                    {d.status}
+                  </span>
+                  <span className="ml-3 text-sm text-gray-500 capitalize">{d.drawType}</span>
+                  <span className="ml-3 text-sm text-gray-400">
+                    {d._count.drawResults} entries
+                  </span>
+                  {d.winningNumbers.length > 0 && (
+                    <span className="ml-3 text-sm text-gray-500">
+                      Numbers: {d.winningNumbers.join(", ")}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">
+                    Pool: ₹{Number(d.prizePool5) + Number(d.prizePool4) + Number(d.prizePool3)}
+                  </span>
+                  {d.status === "pending" && <ExecuteDrawButton drawId={d.id} />}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

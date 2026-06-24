@@ -6,6 +6,9 @@ export default function HomePage() {
       <header className="flex items-center justify-between px-6 py-4">
         <span className="text-xl font-bold tracking-tight">Digital Heroes</span>
         <nav className="flex items-center gap-4 text-sm">
+          <Link href="/pricing" className="font-medium underline underline-offset-4">
+            Pricing
+          </Link>
           <Link href="/login" className="font-medium underline underline-offset-4">
             Sign in
           </Link>
@@ -27,7 +30,7 @@ export default function HomePage() {
         </p>
         <div className="mt-8 flex gap-4">
           <Link
-            href="/signup"
+            href="/pricing"
             className="rounded-full bg-black px-8 py-3 text-sm font-medium text-white"
           >
             Get started

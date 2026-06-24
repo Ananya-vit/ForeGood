@@ -35,7 +35,7 @@ export async function signup(state: FormState, formData: FormData) {
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   const session = await encrypt({
-    userId: Number(user.id),
+    userId: user.id,
     role: user.role as 'user' | 'admin',
     expiresAt,
   })
@@ -77,7 +77,7 @@ export async function login(state: FormState, formData: FormData) {
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   const session = await encrypt({
-    userId: Number(user.id),
+    userId: user.id,
     role: user.role as 'user' | 'admin',
     expiresAt,
   })
