@@ -1,4 +1,5 @@
 import { prisma } from './prisma'
+import { notifyDrawWinner } from './email'
 
 const NUM_COUNT = 5
 const NUM_RANGE = 50
@@ -127,6 +128,14 @@ export async function runDraw(drawId: string) {
   })
 
   await calculatePrizePools(drawId)
+
+  const labeled = `${draw.month}/${draw.year}`
+  const resultsWithPrizes = await prisma.drawResult.findMany({
+    where: { drawId, matchType: { gte: 3 } },
+  })
+  for (const r of resultsWithPrizes) {
+    notifyDrawWinner(r.userId, labeled, r.matchType, Number(r.prizeAmount))
+  }
 
   return { winningNumbers, drawResults }
 }

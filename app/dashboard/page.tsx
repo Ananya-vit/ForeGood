@@ -1,12 +1,34 @@
-import { getUser } from "@/app/lib/dal";
-import { prisma } from "@/app/lib/prisma";
-import Link from "next/link";
+import { getUser } from "@/app/lib/dal"
+import { prisma } from "@/app/lib/prisma"
+import Link from "next/link"
 
 export default async function DashboardPage() {
-  const user = await getUser();
+  const user = await getUser()
+  const userId = user!.id
+
   const subscription = await prisma.subscription.findFirst({
-    where: { userId: user!.id, status: "active" },
-  });
+    where: { userId, status: "active" },
+    include: { charity: { select: { name: true } } },
+  })
+
+  const scores = await prisma.score.findMany({
+    where: { userId },
+    orderBy: { date: "desc" },
+    take: 5,
+  })
+
+  const recentDraw = await prisma.drawResult.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    include: { draw: { select: { month: true, year: true } } },
+  })
+
+  const winnings = await prisma.winner.findMany({
+    where: { userId },
+    include: { drawResult: { include: { draw: { select: { month: true, year: true } } } } },
+  })
+
+  const totalWon = winnings.reduce((sum, w) => sum + Number(w.drawResult.prizeAmount), 0)
 
   return (
     <div>
@@ -38,26 +60,59 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        <div className="rounded-xl border p-5">
+        <Link href="/dashboard/scores" className="rounded-xl border p-5 transition hover:border-black">
           <h2 className="font-semibold">Scores</h2>
-          <p className="mt-1 text-sm text-gray-500">Enter your latest scores</p>
-        </div>
+          {scores.length > 0 ? (
+            <div className="mt-1 text-sm text-gray-500">
+              <p>Last 5: {scores.map((s) => s.score).join(", ")}</p>
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-gray-500">No scores yet</p>
+          )}
+        </Link>
 
         <div className="rounded-xl border p-5">
           <h2 className="font-semibold">Charity</h2>
-          <p className="mt-1 text-sm text-gray-500">Supporting a cause</p>
+          {subscription?.charity ? (
+            <p className="mt-1 text-sm text-gray-500">
+              Supporting {subscription.charity.name} ({subscription.charityPct}%)
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-gray-500">
+              <Link href="/dashboard/settings" className="underline">Choose a charity</Link>
+            </p>
+          )}
         </div>
 
         <div className="rounded-xl border p-5">
           <h2 className="font-semibold">Draws</h2>
-          <p className="mt-1 text-sm text-gray-500">Your participation</p>
+          {recentDraw ? (
+            <div className="mt-1 text-sm text-gray-500">
+              <p>
+                {recentDraw.matchType}-match in {recentDraw.draw.month}/{recentDraw.draw.year}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-gray-500">No participation yet</p>
+          )}
         </div>
 
         <div className="rounded-xl border p-5">
           <h2 className="font-semibold">Winnings</h2>
-          <p className="mt-1 text-sm text-gray-500">Total won: $0</p>
+          {winnings.length > 0 ? (
+            <div className="mt-1 text-sm text-gray-500">
+              <p className="text-lg font-semibold text-green-700">₹{totalWon.toLocaleString()}</p>
+              {winnings.map((w) => (
+                <p key={w.id} className="text-xs">
+                  {w.drawResult.draw.month}/{w.drawResult.draw.year} — {w.adminStatus} · {w.paymentStatus}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-gray-500">Total won: ₹0</p>
+          )}
         </div>
       </div>
     </div>
-  );
+  )
 }

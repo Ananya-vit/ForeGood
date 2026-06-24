@@ -17,51 +17,66 @@ export default function PricingPage() {
 
   async function handleSubscribe(plan: PlanType) {
     setLoading(plan)
-    try {
-      const order = await createRazorpayOrder(plan)
+    const result = await createRazorpayOrder(plan)
 
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: order.currency,
-        name: 'Digital Heroes',
-        description: plan === 'yearly' ? 'Yearly subscription' : 'Monthly subscription',
-        order_id: order.id,
-        handler: function (response: {
-          razorpay_order_id: string
-          razorpay_payment_id: string
-          razorpay_signature: string
-        }) {
-          const form = document.createElement('form')
-          form.method = 'POST'
-          form.action = '/api/razorpay/callback'
-
-          const inputs = { razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id, razorpay_signature: response.razorpay_signature, plan }
-
-          for (const [name, value] of Object.entries(inputs)) {
-            const input = document.createElement('input')
-            input.type = 'hidden'
-            input.name = name
-            input.value = value
-            form.appendChild(input)
-          }
-
-          document.body.appendChild(form)
-          form.submit()
-        },
-        modal: {
-          ondismiss: () => setLoading(null),
-        },
-        prefill: { contact: '', email: '' },
-        theme: { color: '#000000' },
+    if ('error' in result) {
+      if (result.error === 'unauthorized') {
+        router.push('/login?redirect=/pricing')
+      } else {
+        alert('Failed to create order. Please try again.')
       }
-
-      const rzp = new window.Razorpay(options)
-      rzp.open()
-    } catch {
-      alert('Failed to create order. Please try again.')
       setLoading(null)
+      return
     }
+
+    if (!window.Razorpay) {
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      await new Promise((resolve, reject) => {
+        script.onload = resolve
+        script.onerror = reject
+        document.head.appendChild(script)
+      })
+    }
+
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      amount: result.amount,
+      currency: result.currency,
+      name: 'Digital Heroes',
+      description: plan === 'yearly' ? 'Yearly subscription' : 'Monthly subscription',
+      order_id: result.id,
+      handler: function (response: {
+        razorpay_order_id: string
+        razorpay_payment_id: string
+        razorpay_signature: string
+      }) {
+        const form = document.createElement('form')
+        form.method = 'POST'
+        form.action = '/api/razorpay/callback'
+
+        const inputs = { razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id, razorpay_signature: response.razorpay_signature, plan }
+
+        for (const [name, value] of Object.entries(inputs)) {
+          const input = document.createElement('input')
+          input.type = 'hidden'
+          input.name = name
+          input.value = value
+          form.appendChild(input)
+        }
+
+        document.body.appendChild(form)
+        form.submit()
+      },
+      modal: {
+        ondismiss: () => setLoading(null),
+      },
+      prefill: { contact: '', email: '' },
+      theme: { color: '#000000' },
+    }
+
+    const rzp = new window.Razorpay(options)
+    rzp.open()
   }
 
   return (
