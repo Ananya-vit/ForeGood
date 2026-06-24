@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           BigInt         @id @default(autoincrement())
+  email        String         @unique
+  name         String
+  passwordHash String         @map("password_hash")
+  role         String         @default("user")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  subscriptions Subscription[]
+  scores       Score[]
+  drawResults  DrawResult[]
+  winners      Winner[]
+
+  @@map("users")
+}
+
+model Subscription {
+  id                   BigInt    @id @default(autoincrement())
+  userId               BigInt    @map("user_id")
+  plan                 String
+  status               String    @default("active")
+  stripeSubscriptionId String?   @map("stripe_subscription_id")
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  charityId            BigInt?   @map("charity_id")
+  charityPct           Int       @default(10)
+  createdAt            DateTime  @default(now()) @map("created_at")
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  charity              Charity?  @relation(fields: [charityId], references: [id], onDelete: SetNull)
+
+  @@map("subscriptions")
+}
+
+model Score {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  score     Int
+  date      DateTime @db.Date
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date(sort: Desc)])
+  @@map("scores")
+}
+
+model Draw {
+  id              BigInt      @id @default(autoincrement())
+  month           Int
+  year            Int
+  status          String      @default("pending")
+  drawType        String      @default("random") @map("draw_type")
+  winningNumbers  Int[]       @map("winning_numbers")
+  prizePool5      Decimal     @default(0) @db.Decimal(12, 2) @map("prize_pool_5")
+  prizePool4      Decimal     @default(0) @db.Decimal(12, 2) @map("prize_pool_4")
+  prizePool3      Decimal     @default(0) @db.Decimal(12, 2) @map("prize_pool_3")
+  jackpotRollover Decimal     @default(0) @db.Decimal(12, 2) @map("jackpot_rollover")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  drawResults     DrawResult[]
+
+  @@unique([month, year])
+  @@map("draws")
+}
+
+model DrawResult {
+  id          BigInt   @id @default(autoincrement())
+  drawId      BigInt   @map("draw_id")
+  userId      BigInt   @map("user_id")
+  matchType   Int      @map("match_type")
+  prizeAmount Decimal  @default(0) @db.Decimal(12, 2) @map("prize_amount")
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+  draw        Draw     @relation(fields: [drawId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  winner      Winner?
+
+  @@map("draw_results")
+}
+
+model Charity {
+  id            BigInt         @id @default(autoincrement())
+  name          String
+  description   String?
+  imageUrl      String?        @map("image_url")
+  website       String?
+  featured      Boolean        @default(false)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  subscriptions Subscription[]
+
+  @@map("charities")
+}
+
+model Winner {
+  id            BigInt     @id @default(autoincrement())
+  drawResultId  BigInt     @unique @map("draw_result_id")
+  userId        BigInt     @map("user_id")
+  proofUrl      String?    @map("proof_url")
+  adminStatus   String     @default("pending") @map("admin_status")
+  paymentStatus String     @default("pending") @map("payment_status")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  drawResult    DrawResult @relation(fields: [drawResultId], references: [id], onDelete: Cascade)
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("winners")
+}
