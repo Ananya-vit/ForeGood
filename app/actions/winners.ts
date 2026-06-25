@@ -29,6 +29,42 @@ export async function rejectWinner(id: string) {
   revalidatePath('/admin/winners')
 }
 
+export async function submitProof(prevState: WinnerActionState, formData: FormData): Promise<WinnerActionState> {
+  const user = await getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const winnerId = formData.get('winnerId') as string
+  const file = formData.get('proofImage') as File | null
+
+  if (!file || file.size === 0) {
+    return { error: 'Please select a screenshot to upload' }
+  }
+
+  if (!file.type.startsWith('image/')) {
+    return { error: 'Only image files are accepted (PNG, JPG, etc.)' }
+  }
+
+  // 5MB limit
+  if (file.size > 5 * 1024 * 1024) {
+    return { error: 'File too large. Maximum 5MB.' }
+  }
+
+  const winner = await prisma.winner.findUnique({ where: { id: winnerId } })
+  if (!winner || winner.userId !== user.id) return { error: 'Winner not found' }
+
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const base64 = buffer.toString('base64')
+  const dataUrl = `data:${file.type};base64,${base64}`
+
+  await prisma.winner.update({
+    where: { id: winnerId },
+    data: { proofUrl: dataUrl },
+  })
+
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
 export async function markPaid(id: string) {
   const user = await getUser()
   if (user?.role !== 'admin') return
@@ -39,7 +75,7 @@ export async function markPaid(id: string) {
     include: { drawResult: true },
   })
 
-  notifyPaymentApproved(winner.userId, Number(winner.drawResult.prizeAmount))
+  await notifyPaymentApproved(winner.userId, Number(winner.drawResult.prizeAmount))
 
   revalidatePath('/admin/winners')
 }

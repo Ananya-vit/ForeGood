@@ -60,14 +60,10 @@ export default async function AdminWinnersPage() {
               </div>
 
               {w.proofUrl && (
-                <a
-                  href={w.proofUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-block text-sm text-blue-600 underline"
-                >
-                  View proof
-                </a>
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-sm text-blue-600 underline">View proof screenshot</summary>
+                  <img src={w.proofUrl} alt="Score proof" className="mt-2 max-h-64 rounded border object-contain" />
+                </details>
               )}
 
               <WinnerActions

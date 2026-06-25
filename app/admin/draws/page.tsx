@@ -2,6 +2,9 @@ import { prisma } from "@/app/lib/prisma";
 import { CreateDrawForm } from "./create-draw-form";
 import { ExecuteDrawButton } from "./execute-draw-button";
 import { PublishDrawButton } from "./publish-draw-button";
+import { RerunDrawButton } from "./rerun-draw-button";
+import { DeleteDrawButton } from "./delete-draw-button";
+import Link from "next/link";
 
 export default async function AdminDrawsPage() {
   const draws = await prisma.draw.findMany({
@@ -56,9 +59,21 @@ export default async function AdminDrawsPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-400">
                     Pool: ₹{Number(d.prizePool5) + Number(d.prizePool4) + Number(d.prizePool3)}
+                    ({d.poolPct}%)
                   </span>
+                  {d.status !== "pending" && (
+                    <Link href={`/admin/draws/${d.id}/results`} className="rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-gray-50">
+                      Numbers
+                    </Link>
+                  )}
                   {d.status === "pending" && <ExecuteDrawButton drawId={d.id} />}
                   {d.status === "simulated" && <PublishDrawButton drawId={d.id} />}
+                  {d.status !== "completed" && (
+                    <>
+                      {d.status === "simulated" && <RerunDrawButton drawId={d.id} />}
+                      <DeleteDrawButton drawId={d.id} />
+                    </>
+                  )}
                 </div>
               </div>
             ))}

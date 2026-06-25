@@ -10,17 +10,17 @@ export function ScoreForm() {
     <form action={action} className="space-y-4">
       <div>
         <label htmlFor="score" className="block text-sm font-medium">
-          Score
+          Stableford score
         </label>
         <input
           id="score"
           name="score"
           type="number"
           min="1"
-          max="999"
+          max="45"
           required
           className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm"
-          placeholder="e.g. 72"
+          placeholder="Stableford points (1-45)"
         />
       </div>
 

@@ -42,6 +42,10 @@ function randomDate(start: Date, end: Date) {
   return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()))
 }
 
+function matchCount(userNumbers: number[], winningNumbers: number[]): number {
+  return userNumbers.filter((n) => n > 0 && winningNumbers.includes(n)).length
+}
+
 async function main() {
   console.log('Clearing existing data...')
   await prisma.$executeRawUnsafe('TRUNCATE TABLE winners, draw_results, scores, subscriptions, draws, charities, "users" CASCADE')
@@ -53,6 +57,7 @@ async function main() {
         data: {
           name,
           description: `A dedicated non-profit working towards community welfare and social impact through sustainable initiatives.`,
+          imageUrl: `https://picsum.photos/seed/${i + 1}/800/400`,
           website: `https://${name.toLowerCase().replace(/\s+/g, '-')}.org`,
           featured: i < 4,
         },
@@ -61,9 +66,32 @@ async function main() {
   )
   console.log(`  ${charities.length} charities created`)
 
+  console.log('Seeding charity events...')
+  const eventTitles = ['Annual Golf Day', 'Community Outreach', 'Fundraising Gala', 'Awareness Walk', 'Kids Sports Camp']
+  let eventCount = 0
+  for (const c of charities) {
+    const numEvents = Math.floor(Math.random() * 3) + 1
+    for (let i = 0; i < numEvents; i++) {
+      const d = new Date()
+      d.setDate(d.getDate() + Math.floor(Math.random() * 90) + 10)
+      await prisma.charityEvent.create({
+        data: {
+          charityId: c.id,
+          title: pick(eventTitles),
+          description: `An event organised by ${c.name} to support community initiatives.`,
+          date: d,
+          location: ['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Chennai'][Math.floor(Math.random() * 5)],
+        },
+      })
+      eventCount++
+    }
+  }
+  console.log(`  ${eventCount} events created`)
+
   console.log('Seeding users...')
   const password = await bcrypt.hash('password123', 10)
-  const users: { id: string; role: string }[] = []
+  const users: { id: string; role: string; email: string }[] = []
+  const REGULAR_COUNT = 250
 
   const adminNames = ['Admin Rajesh', 'Admin Priya', 'Admin Vikram']
   for (let i = 0; i < 3; i++) {
@@ -75,26 +103,26 @@ async function main() {
         role: 'admin',
       },
     })
-    users.push(user)
+    users.push({ ...user, email: `admin${i + 1}@xsam.in` })
   }
 
-  for (let i = 0; i < 100; i++) {
-    const first = FIRST_NAMES[i % FIRST_NAMES.length]
-    const last = LAST_NAMES[i % LAST_NAMES.length]
+  for (let i = 1; i <= REGULAR_COUNT; i++) {
+    const first = FIRST_NAMES[(i - 1) % FIRST_NAMES.length]
+    const last = LAST_NAMES[(i - 1) % LAST_NAMES.length]
     const user = await prisma.user.create({
       data: {
         name: `${first} ${last}`,
-        email: `${first.toLowerCase()}.${last.toLowerCase()}${i > 0 ? i : ''}@xsam.in`,
+        email: `user${i}@xsam.in`,
         passwordHash: password,
       },
     })
-    users.push(user)
+    users.push({ ...user, email: `user${i}@xsam.in` })
   }
-  console.log(`  ${users.length} users created (3 admins, 100 regular)`)
+  console.log(`  ${users.length} users created (3 admins, ${REGULAR_COUNT} regular)`)
 
   console.log('Seeding subscriptions...')
   const now = new Date()
-  const subscribedUsers = pickN(users.slice(3), 65)
+  const subscribedUsers = pickN(users.slice(3), 150)
   const subData = subscribedUsers.map((user) => {
     const isYearly = Math.random() < 0.3
     const periodEnd = isYearly
@@ -121,17 +149,38 @@ async function main() {
   const today = new Date()
   const scoreData: { userId: string; score: number; date: Date }[] = []
 
-  for (const user of subscribedUsers.filter(() => Math.random() < 0.8)) {
-    const numScores = Math.floor(Math.random() * 5) + 1
+  // Distribution: users 1-80 get 5 scores, 81-130 get 3-4, 131-170 get 1-2, 171-250 get 0
+  // subscribedUsers only includes users 1-150 (those who can have scores)
+  const subscribedIds = new Set(subscribedUsers.map((u) => u.id))
+  const userScoresMap = new Map<string, { score: number; date: Date }[]>()
+
+  for (const user of subscribedUsers) {
+    const userIndex = users.indexOf(user)
+    const idx = userIndex - 3 // 0-based regular user index
+
+    let numScores: number
+    if (idx < 80) numScores = 5
+    else if (idx < 130) numScores = 3 + Math.floor(Math.random() * 2)
+    else if (idx < 170) numScores = 1 + Math.floor(Math.random() * 2)
+    else numScores = 0
+
     const usedDates = new Set<string>()
+    const userScores: { score: number; date: Date }[] = []
+
     for (let i = 0; i < numScores; i++) {
       const d = new Date(today)
       d.setDate(d.getDate() - Math.floor(Math.random() * 60))
       const key = d.toISOString().split('T')[0]
       if (usedDates.has(key)) continue
       usedDates.add(key)
-      scoreData.push({ userId: user.id, score: 65 + Math.floor(Math.random() * 40), date: d })
+
+      // Stableford range 10-45 (realistic golf scores)
+      const score = 10 + Math.floor(Math.random() * 35)
+      scoreData.push({ userId: user.id, score, date: d })
+      userScores.push({ score, date: d })
     }
+
+    userScoresMap.set(user.id, userScores)
   }
 
   for (let i = 0; i < scoreData.length; i += 100) {
@@ -143,33 +192,33 @@ async function main() {
   const draws = await Promise.all([
     prisma.draw.create({
       data: {
-        month: 11, year: 2025, status: 'completed', drawType: 'random',
-        winningNumbers: [5, 12, 23, 34, 48],
+        month: 11, year: 2025, status: 'completed', drawType: 'random', poolPct: 25,
+        winningNumbers: [8, 15, 22, 31, 40],
         prizePool5: 45000, prizePool4: 12000, prizePool3: 4000, jackpotRollover: 0,
       },
     }),
     prisma.draw.create({
       data: {
-        month: 12, year: 2025, status: 'completed', drawType: 'random',
-        winningNumbers: [8, 17, 25, 39, 44],
+        month: 12, year: 2025, status: 'completed', drawType: 'random', poolPct: 25,
+        winningNumbers: [3, 12, 19, 28, 37],
         prizePool5: 0, prizePool4: 15000, prizePool3: 5000, jackpotRollover: 52000,
       },
     }),
     prisma.draw.create({
       data: {
-        month: 1, year: 2026, status: 'completed', drawType: 'algorithmic',
-        winningNumbers: [3, 14, 21, 36, 50],
+        month: 1, year: 2026, status: 'completed', drawType: 'algorithmic', poolPct: 25,
+        winningNumbers: [5, 14, 20, 33, 42],
         prizePool5: 60000, prizePool4: 18000, prizePool3: 6000, jackpotRollover: 0,
       },
     }),
     prisma.draw.create({
-      data: { month: 2, year: 2026, status: 'completed', drawType: 'random',
-        winningNumbers: [7, 19, 30, 41, 46],
+      data: { month: 2, year: 2026, status: 'completed', drawType: 'random', poolPct: 25,
+        winningNumbers: [7, 11, 18, 25, 35],
         prizePool5: 0, prizePool4: 14000, prizePool3: 4500, jackpotRollover: 48000,
       },
     }),
     prisma.draw.create({
-      data: { month: 3, year: 2026, status: 'pending', drawType: 'random' },
+      data: { month: 3, year: 2026, status: 'pending', drawType: 'random', poolPct: 30 },
     }),
   ])
   console.log(`  ${draws.length} draws created`)
@@ -180,15 +229,26 @@ async function main() {
   const allDrawResults: { id: string; userId: string; matchType: number; drawId: string }[] = []
 
   for (const draw of completedDraws) {
-    const participants = pickN(subscribedUsers, 20 + Math.floor(Math.random() * 15))
+    const winning = draw.winningNumbers
+
+    // Participants from subscribed users who have >= 3 scores
+    const eligible = subscribedUsers.filter((u) => (userScoresMap.get(u.id) || []).length >= 3)
+    const participants = pickN(eligible, 20 + Math.floor(Math.random() * 15))
+
     for (const user of participants) {
-      const matchType = (Math.random() < 0.05 ? 5 : Math.random() < 0.15 ? 4 : Math.random() < 0.4 ? 3 : 0) as 0 | 3 | 4 | 5
+      // Random match type (independent of actual score matching) for demo data
+      const matchType = (Math.random() < 0.03 ? 5 : Math.random() < 0.10 ? 4 : Math.random() < 0.30 ? 3 : 0) as 0 | 3 | 4 | 5
       if (matchType < 3) continue
 
+      // Use real scores as user numbers, padded with 0s
+      const raw = (userScoresMap.get(user.id) || []).map((s) => s.score).sort((a, b) => a - b)
+      const numbers = [...raw]
+      while (numbers.length < 5) numbers.push(0)
+
       let prizeAmount = 0
-      if (matchType === 3) prizeAmount = Math.floor(Number(draw.prizePool3) / Math.max(1, Math.floor(participants.length * 0.4)))
-      else if (matchType === 4) prizeAmount = Math.floor(Number(draw.prizePool4) / Math.max(1, Math.floor(participants.length * 0.15)))
-      else if (matchType === 5) prizeAmount = Math.floor(Number(draw.prizePool5) / Math.max(1, Math.floor(participants.length * 0.05)))
+      if (matchType === 3) prizeAmount = Math.floor(Number(draw.prizePool3) / Math.max(1, Math.floor(participants.length * 0.3)))
+      else if (matchType === 4) prizeAmount = Math.floor(Number(draw.prizePool4) / Math.max(1, Math.floor(participants.length * 0.1)))
+      else if (matchType === 5) prizeAmount = Math.floor(Number(draw.prizePool5) / Math.max(1, 1))
 
       const result = await prisma.drawResult.create({
         data: {
@@ -197,6 +257,7 @@ async function main() {
           matchType,
           prizeAmount,
           status: 'paid',
+          userNumbers: numbers,
         },
       })
       allDrawResults.push(result)
@@ -207,14 +268,21 @@ async function main() {
 
   console.log('Seeding winners...')
   let winnerCount = 0
-  for (const r of allDrawResults.filter((r) => r.matchType >= 4)) {
+
+  // Create winners for matchType >= 3 (consistent with runDraw behavior)
+  const allWinnable = allDrawResults.filter((r) => r.matchType >= 3)
+  for (const r of allWinnable) {
+    const isHighTier = r.matchType >= 4
+    const hasProof = isHighTier && (r.matchType === 5 || Math.random() < 0.5)
     await prisma.winner.create({
       data: {
         drawResultId: r.id,
         userId: r.userId,
-        adminStatus: r.matchType === 5 ? 'approved' : pick(['approved', 'pending']),
-        paymentStatus: r.matchType === 5 ? 'paid' : pick(['paid', 'pending']),
-        proofUrl: r.matchType === 5 ? 'https://example.com/proof' : null,
+        adminStatus: pick(['approved', 'pending']),
+        paymentStatus: pick(['paid', 'pending']),
+        proofUrl: hasProof
+          ? `https://picsum.photos/seed/${r.id.slice(0, 8)}/400/300`
+          : null,
       },
     })
     winnerCount++
@@ -231,9 +299,9 @@ async function main() {
   console.log('    admin3@xsam.in')
   console.log('')
   console.log('  Sample users:')
-  console.log(`    ${FIRST_NAMES[0].toLowerCase()}.${LAST_NAMES[0].toLowerCase()}@xsam.in`)
-  console.log(`    ${FIRST_NAMES[1].toLowerCase()}.${LAST_NAMES[1].toLowerCase()}1@xsam.in`)
-  console.log(`    ${FIRST_NAMES[2].toLowerCase()}.${LAST_NAMES[2].toLowerCase()}2@xsam.in`)
+  console.log('    user1@xsam.in')
+  console.log('    user2@xsam.in')
+  console.log('    user3@xsam.in')
   console.log('')
   console.log('  Password for all: password123')
   console.log(`  ${users.length} users, ${subData.length} subscriptions, ${scoreData.length} scores`)

@@ -2,8 +2,7 @@ import { prisma } from './prisma'
 import { notifyDrawWinner } from './email'
 
 const NUM_COUNT = 5
-const NUM_RANGE = 50
-const PRIZE_POOL_PCT = 0.5
+const NUM_RANGE = parseInt(process.env.DRAW_NUM_RANGE || '45', 10)
 
 function randomNumbers(count: number, max: number): number[] {
   const nums = new Set<number>()
@@ -22,7 +21,21 @@ export async function generateDrawNumbers(): Promise<number[]> {
 }
 
 export async function assignUserNumbers(userId: string): Promise<number[]> {
-  return randomNumbers(NUM_COUNT, NUM_RANGE)
+  const scores = await prisma.score.findMany({
+    where: { userId },
+    orderBy: { date: 'desc' },
+    take: 5,
+    select: { score: true },
+  })
+
+  const numbers = scores.map((s) => s.score).sort((a, b) => a - b)
+
+  // pad to exactly 5 with 0s (0 never matches winning numbers 1–45)
+  while (numbers.length < 5) {
+    numbers.push(0)
+  }
+
+  return numbers
 }
 
 export async function calculatePrizePools(drawId: string) {
@@ -41,10 +54,10 @@ export async function calculatePrizePools(drawId: string) {
     return sum + (s.plan === 'yearly' ? 500 : 599)
   }, 0)
 
-  const totalPool = Math.round(monthlyRevenue * PRIZE_POOL_PCT * 100)
-  const prizePool5 = Math.round(totalPool * 0.7)
-  const prizePool4 = Math.round(totalPool * 0.2)
-  const prizePool3 = Math.round(totalPool * 0.1)
+  const totalPool = Math.round(monthlyRevenue * (draw.poolPct / 100))
+  const prizePool5 = Math.round(totalPool * 0.4)
+  const prizePool4 = Math.round(totalPool * 0.35)
+  const prizePool3 = Math.round(totalPool * 0.25)
 
   const winner5 = draw.drawResults.filter((r) => r.matchType === 5)
   const winner4 = draw.drawResults.filter((r) => r.matchType === 4)
@@ -105,18 +118,20 @@ export async function runDraw(drawId: string) {
   const drawResults = []
   for (const { userId } of activeUsers) {
     const userNumbers = await assignUserNumbers(userId)
+    const realCount = userNumbers.filter((n) => n > 0).length
+    if (realCount < 3) continue // no chance of matching 3+
+
     const matches = matchCount(userNumbers, winningNumbers)
 
     if (matches >= 3) {
       const result = await prisma.drawResult.create({
-        data: { drawId, userId, matchType: matches, prizeAmount: 0, status: 'pending' },
+        data: { drawId, userId, matchType: matches, prizeAmount: 0, status: 'pending', userNumbers },
       })
 
-      if (matches === 5) {
-        await prisma.winner.create({
-          data: { drawResultId: result.id, userId, adminStatus: 'pending', paymentStatus: 'pending' },
-        })
-      }
+      const adminStatus = 'pending'
+      await prisma.winner.create({
+        data: { drawResultId: result.id, userId, adminStatus, paymentStatus: 'pending' },
+      })
 
       drawResults.push(result)
     }
@@ -146,6 +161,6 @@ export async function publishDraw(drawId: string) {
     where: { drawId, matchType: { gte: 3 } },
   })
   for (const r of resultsWithPrizes) {
-    notifyDrawWinner(r.userId, labeled, r.matchType, Number(r.prizeAmount))
+    await notifyDrawWinner(r.userId, labeled, r.matchType, Number(r.prizeAmount))
   }
 }

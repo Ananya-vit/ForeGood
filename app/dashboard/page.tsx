@@ -1,6 +1,7 @@
 import { getUser } from "@/app/lib/dal"
 import { prisma } from "@/app/lib/prisma"
 import Link from "next/link"
+import { ProofSubmission } from "./proof-submission"
 
 export default async function DashboardPage() {
   const user = await getUser()
@@ -103,9 +104,16 @@ export default async function DashboardPage() {
             <div className="mt-1 text-sm text-gray-500">
               <p className="text-lg font-semibold text-green-700">₹{totalWon.toLocaleString()}</p>
               {winnings.map((w) => (
-                <p key={w.id} className="text-xs">
-                  {w.drawResult.draw.month}/{w.drawResult.draw.year} — {w.adminStatus} · {w.paymentStatus}
-                </p>
+                <div key={w.id}>
+                  <p className="text-xs">
+                    {w.drawResult.draw.month}/{w.drawResult.draw.year} — {w.adminStatus} · {w.paymentStatus}
+                  </p>
+                  <ProofSubmission
+                    winnerId={w.id}
+                    currentProofUrl={w.proofUrl}
+                    adminStatus={w.adminStatus}
+                  />
+                </div>
               ))}
             </div>
           ) : (

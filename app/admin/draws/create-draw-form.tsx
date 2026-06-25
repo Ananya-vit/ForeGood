@@ -58,6 +58,23 @@ export function CreateDrawForm() {
         </select>
       </div>
 
+      <div>
+        <label htmlFor="poolPct" className="block text-sm font-medium">
+          Pool contribution %
+        </label>
+        <p className="text-xs text-gray-400">Fixed % of each subscription that goes to the prize pool</p>
+        <input
+          id="poolPct"
+          name="poolPct"
+          type="number"
+          min={1}
+          max={100}
+          required
+          defaultValue={25}
+          className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm"
+        />
+      </div>
+
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
       {state?.success && <p className="text-sm text-green-600">Draw created!</p>}
 
