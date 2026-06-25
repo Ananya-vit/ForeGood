@@ -14,7 +14,7 @@ export function ScoreList({ scores }: { scores: ScoreItem[] }) {
       {scores.map((s) => (
         <div key={s.id} className="rounded-lg border px-4 py-3">
           {editing === s.id ? (
-            <form action={action} className="flex items-center gap-2">
+            <form action={action} className="flex flex-wrap items-center gap-2">
               <input type="hidden" name="id" value={s.id} />
               <input
                 name="score"

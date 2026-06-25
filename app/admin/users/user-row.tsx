@@ -32,11 +32,11 @@ export function UserRow({
 
   return (
     <div className="rounded-lg border">
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
         <div className="flex-1">
           <p className="font-medium">{user.name}</p>
           <p className="text-sm text-gray-500">{user.email}</p>
-          <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
             <span>{user.role}</span>
             <span>{scores.length} scores</span>
             {subscriptions.map(s => (
@@ -65,7 +65,7 @@ export function UserRow({
           {/* Profile edit */}
           <details open>
             <summary className="cursor-pointer text-sm font-medium text-gray-600">Edit profile</summary>
-            <form action={profileAction} className="mt-3 flex items-end gap-3">
+            <form action={profileAction} className="mt-3 flex flex-wrap items-end gap-3">
               <input type="hidden" name="userId" value={user.id} />
               <div>
                 <label className="block text-xs text-gray-500">Name</label>
@@ -93,7 +93,7 @@ export function UserRow({
                 scores.map(s => (
                   <div key={s.id} className="flex items-center justify-between rounded border px-3 py-2">
                     {editScoreId === s.id ? (
-                      <form action={editScoreAction} className="flex items-center gap-2 w-full">
+                      <form action={editScoreAction} className="flex flex-wrap items-center gap-2 w-full">
                         <input type="hidden" name="id" value={s.id} />
                         <input name="score" type="number" min="1" max="45" defaultValue={s.score} required className="w-16 rounded border px-2 py-1 text-sm" />
                         <input name="date" type="date" defaultValue={s.date} required className="rounded border px-2 py-1 text-sm" />
@@ -117,7 +117,7 @@ export function UserRow({
               )}
 
               {/* Add score */}
-              <form action={addScoreAction} className="mt-3 flex items-end gap-2 border-t pt-3">
+              <form action={addScoreAction} className="mt-3 flex flex-wrap items-end gap-2 border-t pt-3">
                 <input type="hidden" name="userId" value={user.id} />
                 <div>
                   <label className="block text-xs text-gray-500">Add score</label>
@@ -143,7 +143,7 @@ export function UserRow({
             ) : (
               <div className="mt-3 space-y-2">
                 {subscriptions.map(s => (
-                  <div key={s.id} className="flex items-center justify-between rounded border px-3 py-2 text-sm">
+                  <div key={s.id} className="flex flex-wrap items-center justify-between gap-1 rounded border px-3 py-2 text-sm">
                     <div>
                       <b className="capitalize">{s.plan}</b>
                       <span className={`ml-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${

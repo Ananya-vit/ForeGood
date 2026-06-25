@@ -24,5 +24,9 @@ export async function POST(req: NextRequest) {
   }
 
   await createSubscription(session.userId, plan, razorpayOrderId, razorpayPaymentId)
+
+  const { notifyWelcome } = await import('@/app/lib/email')
+  await notifyWelcome(session.userId, plan)
+
   return NextResponse.redirect(new URL('/dashboard', req.url))
 }

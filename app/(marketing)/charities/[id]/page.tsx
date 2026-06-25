@@ -17,7 +17,7 @@ export default async function CharityProfilePage({
   const past = charity.events.filter((e) => e.date < new Date());
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12">
+    <div className="mx-auto max-w-2xl px-4 pb-12">
       {charity.imageUrl && (
         <img src={charity.imageUrl} alt={charity.name} className="mb-6 h-56 w-full rounded-xl object-cover" />
       )}

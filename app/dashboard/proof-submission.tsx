@@ -31,7 +31,7 @@ export function ProofSubmission({
   return (
     <form ref={ref} action={async (fd) => { await action(fd); ref.current?.reset() }} className="mt-2">
       <input type="hidden" name="winnerId" value={winnerId} />
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <input
           name="proofImage"
           type="file"

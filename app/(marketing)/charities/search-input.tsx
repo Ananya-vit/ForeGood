@@ -18,7 +18,7 @@ export function SearchInput({ q, filter }: { q: string; filter: string }) {
   )
 
   return (
-    <div className="mt-6 flex items-center gap-3">
+    <div className="mt-6 flex flex-wrap items-center gap-3">
       <input
         type="text"
         placeholder="Search charities..."

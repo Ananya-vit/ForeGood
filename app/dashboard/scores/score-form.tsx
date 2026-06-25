@@ -49,7 +49,7 @@ export function ScoreForm() {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-full bg-black px-6 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="w-full rounded-full bg-black px-6 py-2 text-sm font-medium text-white disabled:opacity-50 sm:w-auto"
       >
         {pending ? 'Adding...' : 'Add score'}
       </button>

@@ -18,7 +18,7 @@ export default async function CharityDirectoryPage({
   })
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12">
+    <div className="mx-auto max-w-4xl px-4 pb-12">
       <h1 className="text-3xl font-bold">Charities</h1>
       <p className="mt-2 text-gray-500">Support a cause with your subscription contribution</p>
 

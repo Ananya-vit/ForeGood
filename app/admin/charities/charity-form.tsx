@@ -32,7 +32,7 @@ export function CharityForm({ charity }: { charity?: { id: string; name: string;
       </div>
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
       {state?.success && <p className="text-sm text-green-600">{charity ? 'Updated!' : 'Created!'}</p>}
-      <button type="submit" disabled={pending} className="rounded-full bg-black px-6 py-2 text-sm font-medium text-white disabled:opacity-50">
+      <button type="submit" disabled={pending} className="w-full rounded-full bg-black px-6 py-2 text-sm font-medium text-white disabled:opacity-50 sm:w-auto">
         {pending ? 'Saving...' : charity ? 'Update charity' : 'Create charity'}
       </button>
     </form>
