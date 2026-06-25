@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
-export function MobileNav() {
+export function MobileNav({ loggedIn, role }: { loggedIn?: boolean; role?: 'user' | 'admin' }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -25,16 +25,28 @@ export function MobileNav() {
             <Link href="/charities" onClick={() => setOpen(false)} className="rounded-md px-3 py-2 hover:bg-gray-100">
               Charities
             </Link>
-            <Link href="/login" onClick={() => setOpen(false)} className="rounded-md px-3 py-2 hover:bg-gray-100">
-              Sign in
-            </Link>
-            <Link
-              href="/signup"
-              onClick={() => setOpen(false)}
-              className="rounded-full bg-black px-5 py-2.5 text-center text-sm font-medium text-white"
-            >
-              Get started
-            </Link>
+            {loggedIn ? (
+              <Link
+                href={role === 'admin' ? '/admin' : '/dashboard'}
+                onClick={() => setOpen(false)}
+                className="rounded-full bg-black px-5 py-2.5 text-center text-sm font-medium text-white"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" onClick={() => setOpen(false)} className="rounded-md px-3 py-2 hover:bg-gray-100">
+                  Sign in
+                </Link>
+                <Link
+                  href="/signup"
+                  onClick={() => setOpen(false)}
+                  className="rounded-full bg-black px-5 py-2.5 text-center text-sm font-medium text-white"
+                >
+                  Get started
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       )}

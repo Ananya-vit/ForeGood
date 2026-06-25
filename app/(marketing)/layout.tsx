@@ -1,9 +1,15 @@
 import Link from "next/link"
 import { Container } from "@/app/ui/common"
 import { MobileNav } from "@/app/ui/mobile-nav"
+import { cookies } from "next/headers"
+import { decrypt } from "@/app/lib/session"
 import type { ReactNode } from "react"
 
-export default function MarketingLayout({ children }: { children: ReactNode }) {
+export default async function MarketingLayout({ children }: { children: ReactNode }) {
+  const cookie = (await cookies()).get("session")?.value
+  const session = cookie ? await decrypt(cookie) : null
+  const loggedIn = !!session?.userId
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="fixed top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md">
@@ -18,17 +24,28 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
             <Link href="/charities" className="font-medium text-gray-600 transition-colors hover:text-black">
               Charities
             </Link>
-            <Link href="/login" className="font-medium text-gray-600 transition-colors hover:text-black">
-              Sign in
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-            >
-              Get started
-            </Link>
+            {loggedIn ? (
+              <Link
+                href={session?.role === "admin" ? "/admin" : "/dashboard"}
+                className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="font-medium text-gray-600 transition-colors hover:text-black">
+                  Sign in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                >
+                  Get started
+                </Link>
+              </>
+            )}
           </div>
-          <MobileNav />
+          <MobileNav loggedIn={loggedIn} role={session?.role as 'user' | 'admin' | undefined} />
         </Container>
       </header>
 
