@@ -18,6 +18,14 @@ export default async function DashboardPage() {
     take: 5,
   })
 
+  const drawsEntered = await prisma.drawResult.count({
+    where: { userId, draw: { status: "completed" } },
+  })
+
+  const upcomingDraws = await prisma.draw.count({
+    where: { status: { in: ["pending", "simulated"] } },
+  })
+
   const recentDraw = await prisma.drawResult.findFirst({
     where: { userId, draw: { status: "completed" } },
     orderBy: { createdAt: "desc" },
@@ -87,15 +95,15 @@ export default async function DashboardPage() {
 
         <div className="rounded-xl border p-5">
           <h2 className="font-semibold">Draws</h2>
-          {recentDraw ? (
-            <div className="mt-1 text-sm text-gray-500">
-              <p>
-                {recentDraw.matchType}-match in {recentDraw.draw.month}/{recentDraw.draw.year}
+          <div className="mt-1 text-sm text-gray-500">
+            <p>Entered: <span className="font-medium">{drawsEntered}</span></p>
+            <p>Upcoming: <span className="font-medium">{upcomingDraws}</span></p>
+            {recentDraw && (
+              <p className="text-xs mt-1">
+                Last: {recentDraw.matchType}-match in {recentDraw.draw.month}/{recentDraw.draw.year}
               </p>
-            </div>
-          ) : (
-            <p className="mt-1 text-sm text-gray-500">No participation yet</p>
-          )}
+            )}
+          </div>
         </div>
 
         <div className="rounded-xl border p-5">

@@ -44,6 +44,33 @@ export async function addScore(prevState: ScoreFormState, formData: FormData): P
   return { success: true }
 }
 
+export async function updateScore(prevState: ScoreFormState, formData: FormData): Promise<ScoreFormState> {
+  const user = await getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const id = formData.get('id') as string
+  const score = await prisma.score.findUnique({ where: { id } })
+  if (!score || score.userId !== user.id) return { error: 'Score not found' }
+
+  const parsed = ScoreFormSchema.safeParse({
+    score: formData.get('score'),
+    date: formData.get('date'),
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { score: newScore, date: newDate } = parsed.data
+  const dateObj = new Date(newDate)
+
+  const existing = await prisma.score.findUnique({
+    where: { userId_date: { userId: user.id, date: dateObj } },
+  })
+  if (existing && existing.id !== id) return { error: 'Another score already exists for this date' }
+
+  await prisma.score.update({ where: { id }, data: { score: newScore, date: dateObj } })
+  revalidatePath('/dashboard/scores')
+  return { success: true }
+}
+
 export async function deleteScore(id: string) {
   const user = await getUser()
   if (!user) return

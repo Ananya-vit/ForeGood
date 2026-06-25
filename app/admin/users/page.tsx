@@ -1,12 +1,12 @@
 import { prisma } from "@/app/lib/prisma"
-import { UserActions } from "./user-actions"
+import { UserRow } from "./user-row"
 
 export default async function AdminUsersPage() {
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     include: {
-      subscriptions: { where: { status: "active" }, take: 1 },
-      _count: { select: { scores: true } },
+      subscriptions: { include: { charity: { select: { name: true } } } },
+      scores: { orderBy: { date: "desc" }, take: 20 },
     },
   })
 
@@ -17,22 +17,19 @@ export default async function AdminUsersPage() {
 
       <div className="mt-8 space-y-3">
         {users.map((u) => (
-          <div key={u.id} className="flex items-center justify-between rounded-lg border px-4 py-3">
-            <div>
-              <p className="font-medium">{u.name}</p>
-              <p className="text-sm text-gray-500">{u.email}</p>
-              <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
-                <span>{u.role}</span>
-                <span>{u._count.scores} scores</span>
-                {u.subscriptions[0] && (
-                  <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700">
-                    {u.subscriptions[0].plan}
-                  </span>
-                )}
-              </div>
-            </div>
-            <UserActions userId={u.id} currentRole={u.role} />
-          </div>
+          <UserRow
+            key={u.id}
+            user={{ id: u.id, name: u.name, email: u.email, role: u.role }}
+            scores={u.scores.map(s => ({ id: s.id, score: s.score, date: s.date.toISOString().split("T")[0] }))}
+            subscriptions={u.subscriptions.map(s => ({
+              id: s.id,
+              plan: s.plan,
+              status: s.status,
+              currentPeriodEnd: s.currentPeriodEnd?.toISOString() ?? null,
+              charityName: s.charity?.name ?? null,
+              charityPct: s.charityPct,
+            }))}
+          />
         ))}
       </div>
     </div>
