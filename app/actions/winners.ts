@@ -53,12 +53,20 @@ export async function submitProof(prevState: WinnerActionState, formData: FormDa
   if (!winner || winner.userId !== user.id) return { error: 'Winner not found' }
 
   const buffer = Buffer.from(await file.arrayBuffer())
-  const base64 = buffer.toString('base64')
-  const dataUrl = `data:${file.type};base64,${base64}`
+  const ext = file.name.split('.').pop() || 'png'
+  const fileName = `${winnerId}-${Date.now()}.${ext}`
+
+  let proofUrl: string
+  try {
+    const { uploadProofImage } = await import('@/app/lib/storage')
+    proofUrl = await uploadProofImage(buffer, file.type, fileName)
+  } catch {
+    return { error: 'Failed to upload image. Check storage configuration.' }
+  }
 
   await prisma.winner.update({
     where: { id: winnerId },
-    data: { proofUrl: dataUrl },
+    data: { proofUrl },
   })
 
   revalidatePath('/dashboard')
