@@ -7,18 +7,16 @@ import { Button } from "@/app/ui/button"
 import { StatCard } from "@/app/ui/stat-card"
 
 export default async function HomePage() {
-  const [charityCount, activeSubs, totalWinners, revenue, charitySubs, featuredCharities] = await Promise.all([
+  const [charityCount, activeSubs, totalWinners, charitySubs, featuredCharities] = await Promise.all([
     prisma.charity.count(),
     prisma.subscription.count({ where: { status: "active" } }),
     prisma.winner.count({ where: { adminStatus: "approved" } }),
-    prisma.subscription.count({ where: { status: "active" } }),
     prisma.subscription.findMany({
       where: { status: "active", charityId: { not: null } },
       select: { charityPct: true, plan: true },
     }),
     prisma.charity.findMany({ where: { featured: true }, take: 3 }),
   ])
-
   const planPrices: Record<string, number> = { monthly: 599, yearly: 5999 }
   const charityTotal = charitySubs.reduce((sum, s) => {
     const price = planPrices[s.plan] ?? 599
